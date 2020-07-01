@@ -1,0 +1,168 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GemDrive Launcher</title>
+
+    <style>
+
+      * {
+        box-sizing: border-box;
+        font-family: Verdana;
+      }
+
+      body {
+        background-color: #f7f7f7;
+      }
+
+      .content {
+        margin: 0 auto;
+        max-width: 480px;
+      }
+
+      .gemdrive-app-list-item {
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid black;
+      }
+      .gemdrive-app-list-item:hover {
+        background-color: #ddd;
+        cursor: pointer;
+      }
+      .gemdrive-app-list-item__name {
+        font-size: 1.2rem;
+        font-weight: bold;
+      }
+
+    </style>
+  </head>
+
+  <body>
+
+    <div class='content'></div>
+
+    <script>
+
+      (async () => {
+
+        if (window.opener) {
+          window.addEventListener('message', (message) => {
+            if (message.data.command === 'run') {
+              render(message.data.items);
+            }
+          });
+
+          window.opener.postMessage('child-ready');
+        }
+        else {
+          render();
+        }
+
+      })();
+
+      function render(items) {
+
+        console.log("ya", items);
+
+        const launcherConfig = {
+          apps: [
+            {
+              name: 'GemDrive delver',
+              url: 'https://gemdrive.io/apps/delver/',
+            },
+            {
+              name: 'GemDrive froto',
+              url: 'https://gemdrive.io/apps/froto/',
+            },
+            {
+              name: 'GemDrive launcher',
+              url: 'https://gemdrive.io/apps/launcher/',
+            }
+          ]
+        };
+
+        const gallery = GemDriveLauncherWidget(launcherConfig, items);
+        const content = document.querySelector('.content');
+        content.appendChild(gallery.dom);
+      }
+
+      function GemDriveLauncherWidget(config, items) {
+        const dom = document.createElement('div');
+        dom.classList.add('gemdrive-launcher');
+
+        const appList = AppListWidget(config.apps);
+        dom.appendChild(appList.dom);
+
+        appList.dom.addEventListener('app-selected', (e) => {
+
+          const app = config.apps[e.detail.appId];
+          const childWindow = window.open(app.url);
+
+          window.addEventListener('message', (message) => {
+            console.log(message);
+            if (message.data === 'child-ready') {
+              childWindow.postMessage({
+                command: 'run',
+                items,
+              });
+            }
+          });
+        });
+
+        return {
+          dom,
+        };
+      }
+
+
+      function AppListWidget(apps) {
+        const dom = document.createElement('div');
+        dom.classList.add('gemdrive-app-list');
+
+        const header = document.createElement('h1');
+        header.innerText = "Apps";
+        dom.appendChild(header);
+
+        for (let i = 0; i < apps.length; i++) {
+          const app = apps[i];
+          const listItem = AppListItemWidget(app, i);
+          dom.appendChild(listItem.dom);
+        }
+
+        return {
+          dom,
+        };
+      }
+
+
+      function AppListItemWidget(app, appId) {
+        const dom = document.createElement('div');
+        dom.classList.add('gemdrive-app-list-item');
+
+        const nameEl = document.createElement('div');
+        nameEl.classList.add('gemdrive-app-list-item__name');
+        nameEl.innerText = app.name;
+        dom.appendChild(nameEl);
+
+        const urlEl = document.createElement('div');
+        urlEl.innerText = app.url;
+        dom.appendChild(urlEl);
+
+        dom.addEventListener('click', (e) => {
+          dom.dispatchEvent(new CustomEvent('app-selected', {
+            bubbles: true,
+            detail: {
+              appId,
+            },
+          }));
+        });
+
+        return {
+          dom,
+        };
+      }
+
+    </script>
+  </body>
+
+</html>
